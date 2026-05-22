@@ -4,6 +4,7 @@ import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/src/hook/assets.dart';
 
 import 'package:sqlite3/src/hook/description.dart';
 import 'package:sqlite3/src/hook/openssl.dart';
@@ -35,7 +36,9 @@ void main(List<String> args) async {
             file: downloaded.uri,
           ),
         );
-      case CompileSqlite(:final sourceFile, :final defines):
+      case CompileSqlite(:final libraryType, :final sourceFile, :final defines):
+        final targetOS = input.config.code.targetOS;
+
         // With Flutter on Linux (which already dynamically links SQLite through
         // its libgtk dependency), we run into issues where loading our SQLite
         // build causes internal symbols to be resolved against the already
@@ -47,7 +50,7 @@ void main(List<String> args) async {
         // For the full discussion, see https://github.com/dart-lang/native/issues/2724
 
         String? linkerScript;
-        if (input.config.code.targetOS == OS.linux) {
+        if (targetOS == OS.linux && libraryType != LibraryType.sqlcipher) {
           linkerScript = input.outputDirectory.resolve('sqlite.map').path;
 
           await File(linkerScript).writeAsString('''
@@ -60,44 +63,56 @@ ${usedSqliteSymbols.map((symbol) => '    $symbol;').join('\n')}
 ''');
         }
 
-        final targetOS = input.config.code.targetOS;
-
         final List<String> includes = [];
         final List<String> libraryDirectories = [];
         final List<String> libraries = [];
         final List<String> flags = [];
 
-        switch (targetOS) {
-          case OS.macOS:
-          case OS.iOS:
-            flags.addAll([
-              '-framework',
-              'Foundation',
-              '-framework',
-              'Security',
-            ]);
-            break;
-          case OS.android:
-          case OS.linux:
-          case OS.windows:
-            final kOpenSSLBuiltDir = (await buildOpenSSL(input, output))!.path;
-            print("BUILT OPENSSL IN $kOpenSSLBuiltDir");
+        if (libraryType == LibraryType.sqlcipher) {
+          switch (targetOS) {
+            case OS.macOS:
+            case OS.iOS:
+              // Link with CommonCrypto on Apple platforms, which is optimized
+              flags.addAll([
+                '-framework',
+                'Foundation',
+                '-framework',
+                'Security',
+              ]);
+              break;
+            case OS.android:
+            case OS.linux:
+            case OS.windows:
+              // OpenSSL is downloaded next to the main source file
+              final openSslSrcDir = Directory(
+                p.join(File(sourceFile).parent.path, 'openssl-src'),
+              );
 
-            final cryptoStaticLib = File(
-              getStaticCryptoLib(
-                Directory(kOpenSSLBuiltDir),
-                input.config.code.targetOS,
-                input.config.code.targetArchitecture,
-              ),
-            );
+              final openSslBinariesDir = (await buildOpenSSL(
+                input,
+                output,
+                openSslSrcDir: openSslSrcDir,
+              ))!;
 
-            includes.add('$kOpenSSLBuiltDir/include');
-            libraryDirectories.add(cryptoStaticLib.parent.path);
-            libraries.add('crypto');
-          default:
-            throw UnsupportedError(
-              'Unsupported OS: ${input.config.code.targetOS}',
-            );
+              final cryptoStaticLib = File(
+                getStaticCryptoLib(
+                  openSslBinariesDir,
+                  input.config.code.targetOS,
+                  input.config.code.targetArchitecture,
+                ),
+              );
+
+              includes.add(p.join(openSslBinariesDir.path, 'include'));
+              libraryDirectories.add(cryptoStaticLib.parent.path);
+              libraries.add('crypto');
+
+              // The android library is needed when linking
+              libraries.add('log');
+            default:
+              throw UnsupportedError(
+                'Unsupported OS: ${input.config.code.targetOS}',
+              );
+          }
         }
 
         // final files = Directory(kOpenSSLBuiltDir).listSync();
@@ -114,12 +129,15 @@ ${usedSqliteSymbols.map((symbol) => '    $symbol;').join('\n')}
           defines: defines,
           flags: [
             if (input.config.code.targetOS == OS.linux) ...[
-              // This avoids loading issues on Linux, see comment above.
-              '-Wl,-Bsymbolic',
-              // And since we already have a designated list of symbols to
-              // export, we might as well strip the rest.
-              // TODO: Port this to other targets too.
-              '-Wl,--version-script=$linkerScript',
+              if (linkerScript != null) ...[
+                // This avoids loading issues on Linux, see comment above.
+                '-Wl,-Bsymbolic',
+                // And since we already have a designated list of symbols to
+                // export, we might as well strip the rest.
+                // TODO: Port this to other targets too.
+                '-Wl,--version-script=$linkerScript',
+              ],
+              '-s',
               '-ffunction-sections',
               '-fdata-sections',
               '-Wl,--gc-sections',
@@ -140,7 +158,6 @@ ${usedSqliteSymbols.map((symbol) => '    $symbol;').join('\n')}
               // We need to link the math library on Android.
               'm',
             ],
-            if (targetOS == OS.android) 'log',
             ...libraries,
           ],
         );
