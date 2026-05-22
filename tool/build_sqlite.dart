@@ -58,8 +58,8 @@ void main(List<String> args) async {
   final buildTasks = <Future<void>>[];
 
   for (final mode in [
-    _kSQLiteMode,
-    _kSQLite3MCMode,
+    // _kSQLiteMode,
+    // _kSQLite3MCMode,
     _kSQLCipherMode,
   ]) {
     final sourceFileName = switch (mode) {
