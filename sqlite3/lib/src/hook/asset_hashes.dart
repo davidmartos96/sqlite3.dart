@@ -6,7 +6,7 @@
 
 // dart format off
 // ignore: unnecessary_nullable_for_final_variable_declarations
-const String? releaseTag = 'sqlite3-sqlcipher-3.3.2';
+const String? releaseTag = 'sqlite3-3.3.2';
 
 const Map<String, String> assetNameToSha256Hash = {
   'libsqlcipher.arm.android.so': 'f5fc654767e857de552fee8e159a5c81c76ceafa1404de3082cbb51020ad38cf',
@@ -20,6 +20,11 @@ const Map<String, String> assetNameToSha256Hash = {
   'libsqlcipher.x64.linux.so': '9aaebeac528a52f78dd7baa340338b45ac8b8d5e114e9f5b86a3df9571f54929',
   'libsqlcipher.x64.macos.dylib': '0d46036001cd2ad146fd65df09791a36d96ad8c94403ffe64ffcfca54d09ebff',
   'sqlite3.debug.wasm': '9a942f7c42247e6463725b80bafc3a3f5d1ff6a6d2d27ef1ba1b06a313bf0a2e',
+  'sqlite3.ia32.windows.dll': 'a7cad0fb2e4db9c9eda7f952fc9ec969bbd65416b732e27e035c156528617d1a',
   'sqlite3.wasm': 'cb6b6b3a6d6cd912ef3b95ab995714a4e91694aa9a9d1cd15542314fb44982d0',
+  'sqlite3.x64.windows.dll': '35a668f1ba0700d3ae2647f09e375bd0335a9fb43decea5fbeb742bc2657abe7',
+  'sqlite3mc.arm64.windows.dll': 'ba844aff36f66f41275d66e05d9baf8a1820f50e792d6fdd600810afeaceb229',
+  'sqlite3mc.ia32.windows.dll': 'dc5c7125d949166b5514ae62a17afeb9c3d013fb35988dbc6522c71ddcfacfc2',
   'sqlite3mc.wasm': '4493f8b822215a3ac50364deb0e5a0491bd6ec537c0f79ee2ef1fb02575ffbdd',
+  'sqlite3mc.x64.windows.dll': '25ccee9ecd833662c63de6c6abc7d6848eeaaf9b380f0a527fab07f5175b2ca6',
 };

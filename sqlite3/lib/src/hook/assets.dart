@@ -10,6 +10,7 @@ enum LibraryType {
   /// https://github.com/utelle/SQLite3MultipleCiphers.
   sqlite3mc,
 
+  /// SQLCipher build, with sources taken from https://github.com/sqlcipher/sqlcipher.
   sqlcipher;
 
   String get basename => switch (this) {
@@ -24,15 +25,6 @@ enum LibraryType {
       OS.windows => '$basename.dll',
       OS.iOS || OS.macOS => 'lib$basename.dylib',
       OS.android || OS.linux || _ => 'lib$basename.so',
-    };
-  }
-
-  static LibraryType fromName(String name) {
-    return switch (name) {
-      'sqlite3' => LibraryType.sqlite3,
-      'sqlite3mc' => LibraryType.sqlite3mc,
-      'sqlcipher' => LibraryType.sqlcipher,
-      _ => throw ArgumentError('Unknown library type: $name'),
     };
   }
 }
